@@ -1,15 +1,14 @@
-
-JSON
-
 {
   "$schema": "https://railway.com/railway.schema.json",
   "build": {
-    "builder": "RAILPACK"
+    "builder": "DOCKERFILE",
+    "buildCommand": "npm install && pip install -r requirements.txt",
+    "dockerfilePath": "Dockerfile"
   },
   "deploy": {
     "runtime": "V2",
     "numReplicas": 1,
-    "startCommand": "gunicorn app:app",
+    "startCommand": "web: gunicorn app:app --bind 0.0.0.0:$PORT",
     "sleepApplication": false,
     "useLegacyStacker": false,
     "multiRegionConfig": {
