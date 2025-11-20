@@ -5,11 +5,13 @@ const { spawn } = require('child_process');
 const fs = require('fs');
 
 const app = express();
+// Use the port provided by Railway, or 3000 for local development
 const PORT = process.env.PORT || 3000;
 
 // Set up storage for uploaded files
 const UPLOAD_DIR = path.join(__dirname, 'uploads');
 
+// Ensure the upload directory exists
 if (!fs.existsSync(UPLOAD_DIR)) {
     fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 }
@@ -19,18 +21,20 @@ const storage = multer.diskStorage({
         cb(null, UPLOAD_DIR);
     },
     filename: (req, file, cb) => {
+        // Use a unique name to prevent conflicts
         cb(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname));
     }
 });
 
+// We expect one file upload
 const upload = multer({ 
     storage: storage,
-    limits: { fileSize: 10 * 1024 * 1024 } 
+    limits: { fileSize: 10 * 1024 * 1024 } // Limit files to 10MB
 }).single('csvFile');
 
-// Middleware
+// Middleware to serve static files (index.html)
 app.use(express.static(__dirname));
-app.use(express.json());
+app.use(express.json()); // For parsing application/json
 
 // --- Unified Analysis Endpoint ---
 app.post('/analyze', (req, res) => {
@@ -46,11 +50,13 @@ app.post('/analyze', (req, res) => {
             return res.status(400).json({ success: false, error: 'No CSV file uploaded.' });
         }
 
+        // Get parameters from the request body (sent along with the file in FormData)
         const trackCondition = req.body.trackCondition || 'good';
         const userId = req.body.userId || 'anonymous_user';
-        const isAdvanced = req.body.isAdvanced === 'true';
+        const isAdvanced = req.body.isAdvanced === 'true'; // FormData sends boolean as string
 
         const filePath = req.file.path;
+        const originalFileName = req.file.originalname;
 
         // 2. Prepare data for the Python Orchestrator
         const pythonInput = {
@@ -63,7 +69,8 @@ app.post('/analyze', (req, res) => {
         const analyzerPath = path.join(__dirname, 'analyzer.py');
 
         // 3. Execute the Python script
-        const pythonProcess = spawn('python3', [analyzerPath], {
+        // CRITICAL FIX: Use the absolute path '/usr/bin/python3' for reliable execution
+        const pythonProcess = spawn('/usr/bin/python3', [analyzerPath], {
              // Pass input data to Python's stdin
              stdio: ['pipe', 'pipe', 'pipe'] 
         });
@@ -73,7 +80,7 @@ app.post('/analyze', (req, res) => {
 
         // Write input data to Python's stdin
         pythonProcess.stdin.write(JSON.stringify(pythonInput));
-        pythonProcess.stdin.end();
+        pythonProcess.stdin.end(); // Close stdin to signal EOF
 
         // Collect data from standard output (stdout)
         pythonProcess.stdout.on('data', (data) => {
@@ -94,15 +101,17 @@ app.post('/analyze', (req, res) => {
             
             if (code !== 0) {
                 console.error(`Python script exited with code ${code}. Error: ${pythonError}`);
+                // Attempt to parse the error message if Python sent a JSON error
                 let errorDetails = pythonError.trim() || 'No specific error output.';
                 try {
+                    // Python sends error JSON to stderr in the `if __name__ == "__main__"` block
                     errorDetails = JSON.parse(pythonError).error; 
                 } catch (e) {
-                    // Fallback to raw output
+                    // Fallback to raw output if JSON parsing fails
                 }
                 return res.status(500).json({ 
                     success: false, 
-                    error: `Analysis Orchestrator failed.`, 
+                    error: `Analysis Orchestrator failed. Check Python logs for details.`, 
                     details: errorDetails
                 });
             }
@@ -128,4 +137,5 @@ app.post('/analyze', (req, res) => {
 
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
+    console.log(`Access the application at http://localhost:${PORT}`);
 });
