@@ -2,8 +2,7 @@
 FROM node:18-slim
 
 # 1. Install system dependencies (Python, build tools, and PostgreSQL libraries)
-# libpq-dev is ESSENTIAL for compiling psycopg2-binary, which links against C libraries.
-# python3-dev is essential for compiling packages like pandas.
+# libpq-dev is ESSENTIAL for compiling psycopg2-binary.
 RUN apt-get update && \
     apt-get install -y python3 python3-pip build-essential python3-dev libpq-dev && \
     apt-get clean && \
@@ -20,18 +19,19 @@ COPY requirements.txt ./
 RUN npm install
 
 # 3. Install Python dependencies
-RUN python3 -m pip install --upgrade pip && \
-    pip3 install --no-cache-dir -r requirements.txt
+# Use --break-system-packages flag to bypass the PEP 668 "externally-managed-environment" error
+RUN python3 -m pip install --upgrade pip --break-system-packages && \
+    pip3 install --no-cache-dir -r requirements.txt --break-system-packages
 
-# Copy remaining application files (using wildcards is simpler)
+# Copy remaining application files
 COPY *.py ./
 COPY *.js ./
 COPY *.html ./
 COPY *.md ./
 
-# Expose the port
+# Expose the port (Gunicorn default port)
 EXPOSE 8000 
 
 # Set the entrypoint to run the Python Gunicorn server
-# We assume your main Flask application instance is named 'app' inside 'app.py'
+# Assumes the Flask application instance is named 'app' inside 'app.py'
 CMD ["gunicorn", "--bind", "0.0.0.0:$PORT", "app:app"]
