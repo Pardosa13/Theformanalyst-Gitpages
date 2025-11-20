@@ -6,7 +6,7 @@ const fs = require('fs');
 
 const app = express();
 // Use the port provided by Railway, or 3000 for local development
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 3000;
 
 // Set up storage for uploaded files
 const UPLOAD_DIR = path.join(__dirname, 'uploads');
@@ -32,7 +32,14 @@ const upload = multer({
     limits: { fileSize: 10 * 1024 * 1024 } // Limit files to 10MB
 }).single('csvFile');
 
-// Middleware to serve static files (index.html)
+// --- CRITICAL FIX: Explicit Root Route ---
+// This ensures that visiting the website URL serves the index.html file directly.
+// This often fixes 502 Bad Gateway errors on the homepage.
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// Middleware to serve static files (CSS, JS, etc.)
 app.use(express.static(__dirname));
 app.use(express.json()); // For parsing application/json
 
