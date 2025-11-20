@@ -23,8 +23,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application files
 COPY . .
 
-# Expose port (Railway will override this)
+# Set environment variables
+ENV FLASK_APP=app.py
+ENV PORT=8080
+
+# Expose port
 EXPOSE 8080
 
-# Start the application
-CMD ["python", "app.py"]
+# Start the application - Railway expects this format
+CMD gunicorn --bind 0.0.0.0:$PORT app:app
