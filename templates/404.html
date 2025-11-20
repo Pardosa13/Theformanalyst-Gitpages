@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title id="pageTitle">Error Page</title>
+    <title>404 Error - Page Not Found</title>
     <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Custom font for a clean, modern look */
+        /* Custom font and base styling */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
         body {
             font-family: 'Inter', sans-serif;
@@ -19,14 +19,13 @@
             margin: 0;
             padding: 1rem;
         }
-        /* Custom class for the code number animation */
+        /* Styling for the large error code number (Blue/Indigo Gradient) */
         .error-code-bg {
             background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
             text-shadow: 0px 4px 8px rgba(0, 0, 0, 0.05);
-            transition: transform 0.5s ease-in-out;
         }
         .error-card {
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
@@ -35,24 +34,24 @@
 </head>
 <body>
 
-<div id="errorContainer" class="max-w-xl w-full bg-white p-8 md:p-12 rounded-2xl error-card text-center transition-all duration-300 transform scale-100">
+<div class="max-w-xl w-full bg-white p-8 md:p-12 rounded-2xl error-card text-center transition-all duration-300 transform scale-100">
 
     <!-- Error Code Number (Large) -->
-    <h1 id="errorCode" class="text-9xl font-extrabold error-code-bg mb-4">404</h1>
+    <h1 class="text-9xl font-extrabold error-code-bg mb-4">404</h1>
 
     <!-- Error Title -->
-    <h2 id="errorTitle" class="text-3xl md:text-4xl font-bold text-gray-800 mb-4">Page Not Found</h2>
+    <h2 class="text-3xl md:text-4xl font-bold text-gray-800 mb-4">Page Not Found</h2>
 
     <!-- Error Message -->
-    <p id="errorMessage" class="text-lg md:text-xl text-gray-600 mb-6">The page you're looking for doesn't exist.</p>
+    <p class="text-lg md:text-xl text-gray-600 mb-6">The page you're looking for doesn't exist.</p>
 
     <!-- Detailed Description -->
-    <p id="errorDescription" class="text-sm text-gray-500 mb-8 max-w-md mx-auto">
+    <p class="text-sm text-gray-500 mb-8 max-w-md mx-auto">
         We can't seem to find the resource you requested. Please check the URL for errors or click the button below to return to the homepage.
     </p>
 
     <!-- Action Button -->
-    <a href="#" class="inline-block px-8 py-3 bg-indigo-600 text-white font-semibold rounded-full shadow-lg hover:bg-indigo-700 transition duration-300 transform hover:scale-105">
+    <a href="/" class="inline-block px-8 py-3 bg-indigo-600 text-white font-semibold rounded-full shadow-lg hover:bg-indigo-700 transition duration-300 transform hover:scale-105">
         Go to Homepage
     </a>
 
@@ -63,77 +62,5 @@
 
 </div>
 
-<script>
-    // Configuration object for all error types
-    const ERROR_CONFIG = {
-        '404': {
-            title: "Page Not Found",
-            message: "The page you're looking for doesn't exist.",
-            description: "We can't seem to find the resource you requested. Please check the URL for errors or click the button below to return to the homepage.",
-            class: 'text-indigo-600',
-            bg: 'linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)'
-        },
-        '500': {
-            title: "Internal Server Error",
-            message: "Something went wrong on our end.",
-            description: "We apologize for the inconvenience. Our team has been notified and is working to resolve the issue. Please try again later.",
-            class: 'text-red-600',
-            bg: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)'
-        },
-        '502': {
-            title: "Bad Gateway",
-            message: "The server received an invalid response.",
-            description: "The server acting as a gateway or proxy received an invalid response from the upstream server. This is usually temporary.",
-            class: 'text-yellow-600',
-            bg: 'linear-gradient(135deg, #fef9c3 0%, #fde68a 100%)'
-        }
-    };
-
-    /**
-     * Updates the content of the error page based on the given error code.
-     * @param {string} code - The HTTP error code (e.g., '404', '500').
-     */
-    function loadErrorPage(code) {
-        const config = ERROR_CONFIG[code] || ERROR_CONFIG['404'];
-        
-        // Update DOM elements
-        document.getElementById('pageTitle').textContent = `${code} Error - ${config.title}`;
-        document.getElementById('errorCode').textContent = code;
-        document.getElementById('errorTitle').textContent = config.title;
-        document.getElementById('errorMessage').textContent = config.message;
-        document.getElementById('errorDescription').textContent = config.description;
-
-        // Apply dynamic styling (using inline style for the background gradient for demonstration)
-        const errorCodeElement = document.getElementById('errorCode');
-        
-        // Reset classes for visual transition effect (optional but nice)
-        errorCodeElement.classList.remove('animate-pulse'); 
-        
-        // Update the gradient background for the large code number
-        errorCodeElement.style.backgroundImage = config.bg;
-        
-        // Little animation for feedback
-        setTimeout(() => {
-            errorCodeElement.classList.add('animate-pulse');
-        }, 50);
-    }
-
-    /**
-     * Main function to determine which page to load.
-     */
-    function init() {
-        const urlParams = new URLSearchParams(window.location.search);
-        let code = urlParams.get('code');
-
-        if (!code || !ERROR_CONFIG.hasOwnProperty(code)) {
-            code = '404'; // Default to 404 if parameter is missing or invalid
-        }
-
-        loadErrorPage(code);
-    }
-
-    // Initialize the page once the DOM is ready
-    window.onload = init;
-</script>
 </body>
 </html>
