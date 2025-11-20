@@ -254,5 +254,17 @@ def init_db():
             print(f'Admin user already exists: {admin_username}')
 
 if __name__ == '__main__':
+    import os
     port = int(os.environ.get('PORT', 8080))
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=port, debug=False)
+```
+
+## Steps to fix:
+
+1. Edit `requirements.txt` and remove any ``` markers or formatting
+2. Make sure it contains only the package list (as shown above)
+3. Commit and push: 
+```
+   git add requirements.txt
+   git commit -m "Fix requirements.txt formatting"
+   git push
