@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Login - The Form Analyst{% endblock %}
+
+{% block content %}
+<div style="max-width: 400px; margin: 80px auto;">
+    <div class="card">
+        <h1 style="text-align: center; margin-bottom: 30px;">Login</h1>
+        
+        <form method="POST" action="{{ url_for('auth.login') }}">
+            <div style="margin-bottom: 20px;">
+                <label for="username" style="display: block; margin-bottom: 8px; font-weight: 600;">Username</label>
+                <input type="text" id="username" name="username" required 
+                       style="width: 100%; padding: 10px; border: 2px solid #e9ecef; border-radius: 8px; font-size: 14px;">
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <label for="password" style="display: block; margin-bottom: 8px; font-weight: 600;">Password</label>
+                <input type="password" id="password" name="password" required 
+                       style="width: 100%; padding: 10px; border: 2px solid #e9ecef; border-radius: 8px; font-size: 14px;">
+            </div>
+            
+            <div style="margin-bottom: 25px;">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="checkbox" name="remember" style="width: 16px; height: 16px;">
+                    <span>Remember me</span>
+                </label>
+            </div>
+            
+            <button type="submit" class="btn btn-primary" style="width: 100%;">
+                Login
+            </button>
+        </form>
+        
+        <div style="margin-top: 20px; text-align: center; font-size: 14px; color: #6c757d;">
+            <p>Contact your administrator for account access.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

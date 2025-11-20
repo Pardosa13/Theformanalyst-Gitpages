@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}History - The Form Analyst{% endblock %}
+
+{% block content %}
+<h1>Analysis History</h1>
+
+<div class="card">
+    {% if meetings %}
+    <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+            <tr style="background-color: #f5f7fa;">
+                <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e2e8f0;">Meeting Name</th>
+                {% if current_user.is_admin %}
+                <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e2e8f0;">User</th>
+                {% endif %}
+                <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e2e8f0;">Date Analyzed</th>
+                <th style="padding: 12px; text-align: center; border-bottom: 2px solid #e2e8f0;">Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for meeting in meetings %}
+            <tr>
+                <td style="padding: 12px; border-bottom: 1px solid #e2e8f0;">{{ meeting.meeting_name }}</td>
+                {% if current_user.is_admin %}
+                <td style="padding: 12px; border-bottom: 1px solid #e2e8f0;">{{ meeting.user.username }}</td>
+                {% endif %}
+                <td style="padding: 12px; border-bottom: 1px solid #e2e8f0;">{{ meeting.uploaded_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td style="padding: 12px; text-align: center; border-bottom: 1px solid #e2e8f0;">
+                    <a href="{{ url_for('view_meeting', meeting_id=meeting.id) }}" class="btn btn-primary" 
+                       style="font-size: 12px; padding: 6px 12px;">
+                        View Results
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="text-align: center; color: #6c757d; padding: 40px 0;">
+        No meetings analyzed yet. <a href="{{ url_for('dashboard') }}" style="color: #667eea; text-decoration: none;">Upload your first CSV!</a>
+    </p>
+    {% endif %}
+</div>
+{% endblock %}

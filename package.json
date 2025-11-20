@@ -1,0 +1,9 @@
+{
+  "name": "theformanalyst",
+  "version": "1.0.0",
+  "description": "Racing analysis algorithm",
+  "main": "analyzer.js",
+  "dependencies": {
+    "papaparse": "^5.4.1"
+  }
+}

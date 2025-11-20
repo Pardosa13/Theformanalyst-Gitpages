@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - The Form Analyst{% endblock %}
+
+{% block content %}
+<h1>Racing Analysis Dashboard</h1>
+
+<div class="card">
+    <h2>Upload & Analyze Meeting</h2>
+    
+    <form method="POST" action="{{ url_for('analyze') }}" enctype="multipart/form-data">
+        <div style="margin-bottom: 20px;">
+            <label for="csv_file" style="display: block; margin-bottom: 10px; font-weight: 600;">
+                Select CSV File
+            </label>
+            <input type="file" id="csv_file" name="csv_file" accept=".csv" required
+                   style="padding: 8px 12px; border: 2px solid #e9ecef; border-radius: 8px; background-color: #f5f7fa; font-size: 14px; cursor: pointer;">
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+            <label for="track_condition" style="display: block; margin-bottom: 10px; font-weight: 600;">
+                Track Condition
+            </label>
+            <select id="track_condition" name="track_condition" 
+                    style="padding: 8px 12px; border: 2px solid #e9ecef; border-radius: 8px; background-color: #f5f7fa; font-size: 14px; width: 200px;">
+                <option value="firm">Firm</option>
+                <option value="good" selected>Good</option>
+                <option value="soft">Soft</option>
+                <option value="heavy">Heavy</option>
+                <option value="synthetic">Synthetic</option>
+            </select>
+        </div>
+        
+        <div style="margin-bottom: 25px;">
+            <label style="display: flex; align-items: center; gap: 12px; cursor: pointer; width: fit-content;">
+                <div style="position: relative; display: inline-block; width: 48px; height: 26px;">
+                    <input type="checkbox" id="advanced_mode" name="advanced_mode" style="opacity: 0; width: 0; height: 0;">
+                    <span style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e0; transition: 0.3s; border-radius: 26px;"></span>
+                    <span style="position: absolute; content: ''; height: 20px; width: 20px; left: 3px; bottom: 3px; background-color: white; transition: 0.3s; border-radius: 50%;"></span>
+                </div>
+                <span style="font-size: 14px; font-weight: 600; color: #4a5568;">Advanced Mode</span>
+            </label>
+        </div>
+        
+        <button type="submit" class="btn btn-primary">
+            📊 Analyze Meeting
+        </button>
+    </form>
+</div>
+
+{% if recent_meetings %}
+<div class="card">
+    <h2>Recent Analyses</h2>
+    <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+            <tr style="background-color: #f5f7fa;">
+                <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e2e8f0;">Meeting</th>
+                <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e2e8f0;">Date</th>
+                <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e2e8f0;">Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for meeting in recent_meetings %}
+            <tr>
+                <td style="padding: 12px; border-bottom: 1px solid #e2e8f0;">{{ meeting.meeting_name }}</td>
+                <td style="padding: 12px; border-bottom: 1px solid #e2e8f0;">{{ meeting.uploaded_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td style="padding: 12px; border-bottom: 1px solid #e2e8f0;">
+                    <a href="{{ url_for('view_meeting', meeting_id=meeting.id) }}" class="btn btn-primary" style="font-size: 12px; padding: 6px 12px;">
+                        View Results
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<style>
+    /* Toggle switch styling */
+    #advanced_mode:checked + span {
+        background: linear-gradient(45deg, #667eea, #764ba2);
+    }
+    
+    #advanced_mode:checked + span + span {
+        transform: translateX(22px);
+    }
+</style>
+{% endblock %}

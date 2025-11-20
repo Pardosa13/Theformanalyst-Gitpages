@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}{{ meeting.meeting_name }} - The Form Analyst{% endblock %}
+
+{% block content %}
+<h1>{{ meeting.meeting_name }}</h1>
+
+<div style="margin-bottom: 20px;">
+    <a href="{{ url_for('history') }}" style="color: #667eea; text-decoration: none;">← Back to History</a>
+</div>
+
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div>
+            <p style="margin: 0; color: #6c757d;">
+                Analyzed: {{ meeting.uploaded_at.strftime('%Y-%m-%d %H:%M') }}
+            </p>
+        </div>
+        <button onclick="window.print()" class="btn btn-primary">
+            📄 Print / Save PDF
+        </button>
+    </div>
+</div>
+
+<!-- Display Results for Each Race -->
+{% for race in results.races %}
+<div class="card">
+    <h2>Race {{ race.race_number }}</h2>
+    
+    {% if race.distance %}
+    <p style="margin: 10px 0; color: #6c757d;">
+        Distance: {{ race.distance }}
+    </p>
+    {% endif %}
+    
+    <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+        <thead>
+            <tr style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                <th style="padding: 12px; text-align: center;">Pos</th>
+                <th style="padding: 12px; text-align: left;">Horse Name</th>
+                <th style="padding: 12px; text-align: center;">Score</th>
+                <th style="padding: 12px; text-align: center;">Odds</th>
+                <th style="padding: 12px; text-align: left;">Notes</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for horse in race.horses %}
+            <tr {% if loop.index == 1 %}style="background-color: #d4edda;"
+                {% elif loop.index == 2 %}style="background-color: #fff3cd;"
+                {% elif loop.index == 3 %}style="background-color: #ffe4b3;"
+                {% endif %}>
+                <td style="padding: 12px; text-align: center; font-weight: bold; border-bottom: 1px solid #e2e8f0;">
+                    {{ loop.index }}
+                </td>
+                <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; font-weight: 600;">
+                    {{ horse.horse_name }}
+                </td>
+                <td style="padding: 12px; text-align: center; font-weight: bold; border-bottom: 1px solid #e2e8f0;">
+                    {{ horse.score|round(1) }}
+                </td>
+                <td style="padding: 12px; text-align: center; border-bottom: 1px solid #e2e8f0;">
+                    {{ horse.odds }}
+                </td>
+                <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; font-size: 12px; white-space: pre-wrap;">
+                    {{ horse.notes }}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endfor %}
+
+<style>
+    @media print {
+        nav, .btn, a[href*="history"] {
+            display: none !important;
+        }
+        body {
+            background: white;
+        }
+        .card {
+            break-inside: avoid;
+            page-break-inside: avoid;
+        }
+    }
+</style>
+{% endblock %}
