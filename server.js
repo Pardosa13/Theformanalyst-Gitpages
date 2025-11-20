@@ -5,144 +5,106 @@ const { spawn } = require('child_process');
 const fs = require('fs');
 
 const app = express();
-// Use the port provided by Railway, or 3000 for local development
+// CRITICAL: Railway provides the PORT. Default to 3000 for local.
 const PORT = process.env.PORT || 3000;
 
-// Set up storage for uploaded files
+// --- 1. Setup Uploads Directory ---
 const UPLOAD_DIR = path.join(__dirname, 'uploads');
-
-// Ensure the upload directory exists
 if (!fs.existsSync(UPLOAD_DIR)) {
-    fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+    try {
+        fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+        console.log(`Created upload directory at ${UPLOAD_DIR}`);
+    } catch (err) {
+        console.error(`Failed to create upload directory: ${err.message}`);
+    }
 }
 
 const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, UPLOAD_DIR);
-    },
+    destination: (req, file, cb) => { cb(null, UPLOAD_DIR); },
     filename: (req, file, cb) => {
-        // Use a unique name to prevent conflicts
-        cb(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname));
+        cb(null, `${Date.now()}-${file.originalname}`);
+    }
+});
+const upload = multer({ storage: storage, limits: { fileSize: 10 * 1024 * 1024 } });
+
+// --- 2. Static Files & Middleware ---
+app.use(express.json());
+// Serve all files in the root directory (css, js, html)
+app.use(express.static(__dirname));
+
+// --- 3. Root Route (Safe Version) ---
+app.get('/', (req, res) => {
+    const indexPath = path.join(__dirname, 'index.html');
+    
+    if (fs.existsSync(indexPath)) {
+        res.sendFile(indexPath);
+    } else {
+        // Fallback if index.html is missing (Prevents 502 Crash)
+        console.warn("index.html is missing!");
+        res.status(200).send(`
+            <h1>Server is Running!</h1>
+            <p>However, <code>index.html</code> was not found in the root directory.</p>
+            <p>Please ensure you have uploaded an index.html file.</p>
+        `);
     }
 });
 
-// We expect one file upload
-const upload = multer({ 
-    storage: storage,
-    limits: { fileSize: 10 * 1024 * 1024 } // Limit files to 10MB
-}).single('csvFile');
-
-// --- CRITICAL FIX: Explicit Root Route ---
-// This ensures that visiting the website URL serves the index.html file directly.
-// This often fixes 502 Bad Gateway errors on the homepage.
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
+// --- 4. Health Check (Good for Debugging) ---
+app.get('/health', (req, res) => {
+    res.status(200).send('OK');
 });
 
-// Middleware to serve static files (CSS, JS, etc.)
-app.use(express.static(__dirname));
-app.use(express.json()); // For parsing application/json
+// --- 5. Analyze Endpoint ---
+app.post('/analyze', upload.single('csvFile'), (req, res) => {
+    if (!req.file) return res.status(400).json({ success: false, error: 'No CSV file uploaded.' });
 
-// --- Unified Analysis Endpoint ---
-app.post('/analyze', (req, res) => {
-    // 1. Handle file upload and body parameters
-    upload(req, res, async (err) => {
-        if (err instanceof multer.MulterError) {
-            return res.status(400).json({ success: false, error: `Upload error: ${err.message}` });
-        } else if (err) {
-            return res.status(500).json({ success: false, error: `Unknown upload error: ${err.message}` });
+    const { trackCondition, userId, isAdvanced } = req.body;
+    const filePath = req.file.path;
+    const analyzerPath = path.join(__dirname, 'analyzer.py');
+
+    console.log(`Analyzing file: ${filePath}`);
+
+    // CRITICAL: Use absolute path to python3
+    const pythonProcess = spawn('/usr/bin/python3', [analyzerPath], {
+         stdio: ['pipe', 'pipe', 'pipe'] 
+    });
+
+    let pythonOutput = '';
+    let pythonError = '';
+
+    pythonProcess.stdin.write(JSON.stringify({
+        file_path: filePath,
+        track_condition: trackCondition,
+        user_id: userId,
+        is_advanced: isAdvanced
+    }));
+    pythonProcess.stdin.end();
+
+    pythonProcess.stdout.on('data', (data) => { pythonOutput += data.toString(); });
+    pythonProcess.stderr.on('data', (data) => { pythonError += data.toString(); });
+
+    pythonProcess.on('close', (code) => {
+        // Cleanup file
+        fs.unlink(filePath, (e) => { if(e) console.error("Cleanup error:", e); });
+        
+        if (code !== 0) {
+            console.error(`Python Error (Code ${code}): ${pythonError}`);
+            return res.status(500).json({ success: false, error: 'Analysis failed.', details: pythonError });
         }
 
-        if (!req.file) {
-            return res.status(400).json({ success: false, error: 'No CSV file uploaded.' });
+        try {
+            const results = JSON.parse(pythonOutput);
+            res.json({ success: true, ...results });
+        } catch (e) {
+            console.error("JSON Parse Error:", e, "Raw Output:", pythonOutput);
+            res.status(500).json({ success: false, error: 'Invalid response from analyzer.' });
         }
-
-        // Get parameters from the request body (sent along with the file in FormData)
-        const trackCondition = req.body.trackCondition || 'good';
-        const userId = req.body.userId || 'anonymous_user';
-        const isAdvanced = req.body.isAdvanced === 'true'; // FormData sends boolean as string
-
-        const filePath = req.file.path;
-        const originalFileName = req.file.originalname;
-
-        // 2. Prepare data for the Python Orchestrator
-        const pythonInput = {
-            file_path: filePath,
-            track_condition: trackCondition,
-            user_id: userId,
-            is_advanced: isAdvanced
-        };
-
-        const analyzerPath = path.join(__dirname, 'analyzer.py');
-
-        // 3. Execute the Python script
-        // CRITICAL FIX: Use the absolute path '/usr/bin/python3' for reliable execution
-        const pythonProcess = spawn('/usr/bin/python3', [analyzerPath], {
-             // Pass input data to Python's stdin
-             stdio: ['pipe', 'pipe', 'pipe'] 
-        });
-
-        let pythonOutput = '';
-        let pythonError = '';
-
-        // Write input data to Python's stdin
-        pythonProcess.stdin.write(JSON.stringify(pythonInput));
-        pythonProcess.stdin.end(); // Close stdin to signal EOF
-
-        // Collect data from standard output (stdout)
-        pythonProcess.stdout.on('data', (data) => {
-            pythonOutput += data.toString();
-        });
-
-        // Collect data from standard error (stderr)
-        pythonProcess.stderr.on('data', (data) => {
-            pythonError += data.toString();
-        });
-
-        // When the Python script exits
-        pythonProcess.on('close', (code) => {
-            // Clean up the uploaded file immediately
-            fs.unlink(filePath, (unlinkErr) => {
-                if (unlinkErr) console.error("Error deleting file after analysis:", unlinkErr);
-            });
-            
-            if (code !== 0) {
-                console.error(`Python script exited with code ${code}. Error: ${pythonError}`);
-                // Attempt to parse the error message if Python sent a JSON error
-                let errorDetails = pythonError.trim() || 'No specific error output.';
-                try {
-                    // Python sends error JSON to stderr in the `if __name__ == "__main__"` block
-                    errorDetails = JSON.parse(pythonError).error; 
-                } catch (e) {
-                    // Fallback to raw output if JSON parsing fails
-                }
-                return res.status(500).json({ 
-                    success: false, 
-                    error: `Analysis Orchestrator failed. Check Python logs for details.`, 
-                    details: errorDetails
-                });
-            }
-
-            try {
-                // Python script should output the final JSON string
-                const results = JSON.parse(pythonOutput);
-                res.json({ success: true, results: results.results, meeting_id: results.meeting_id });
-            } catch (e) {
-                console.error("Failed to parse JSON from Python orchestrator output:", e);
-                console.log("Raw Python Output:", pythonOutput);
-                res.status(500).json({ success: false, error: 'Failed to read final analysis results from Python.' });
-            }
-        });
-
-        pythonProcess.on('error', (err) => {
-            console.error('Failed to start Python process:', err);
-            res.status(500).json({ success: false, error: 'Server failed to execute Python interpreter.' });
-        });
     });
 });
 
-
-app.listen(PORT, () => {
+// --- 6. Start Server (Bind to 0.0.0.0) ---
+// CRITICAL FIX: Explicitly bind to 0.0.0.0 for Docker compatibility
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on port ${PORT}`);
-    console.log(`Access the application at http://localhost:${PORT}`);
+    console.log(`Ready to handle requests.`);
 });
