@@ -1,7 +1,8 @@
 # Use a Node.js base image (includes NPM) as server.js is the entry point
 FROM node:18-slim
 
-# Install Python and crucial build tools
+# 1. Install system dependencies (Python and build tools)
+# python3-dev is essential for compiling Python packages like pandas with C extensions.
 RUN apt-get update && \
     apt-get install -y python3 python3-pip build-essential python3-dev && \
     apt-get clean && \
@@ -14,11 +15,13 @@ WORKDIR /usr/src/app
 COPY package*.json ./
 COPY requirements.txt ./
 
-# Install Node.js dependencies
+# 2. Install Node.js dependencies
 RUN npm install
 
-# Install Python dependencies
-RUN pip3 install --no-cache-dir -r requirements.txt
+# 3. Install Python dependencies
+# Upgrade pip first, then install packages without version constraints for better compatibility
+RUN python3 -m pip install --upgrade pip && \
+    pip3 install --no-cache-dir -r requirements.txt
 
 # Copy remaining application files
 COPY server.js ./
