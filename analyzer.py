@@ -1,6 +1,7 @@
 import json
 import subprocess
 import os
+import sys
 from models import db, Meeting, Race, Horse, Prediction
 
 def process_csv_and_analyze(csv_file, filename, track_condition, user_id, is_advanced=False):
@@ -13,7 +14,7 @@ def process_csv_and_analyze(csv_file, filename, track_condition, user_id, is_adv
         track_condition: Track condition (firm, good, soft, heavy, synthetic)
         user_id: ID of user who uploaded
         is_advanced: Whether to calculate advanced probabilities
-    
+        
     Returns:
         dict: Analysis results with races and predictions
     """
@@ -67,6 +68,7 @@ def run_js_analyzer(csv_data, track_condition, is_advanced):
     
     try:
         # Call Node.js analyzer
+        # We pass the input JSON data via stdin
         result = subprocess.run(
             ['node', analyzer_path],
             input=json.dumps(input_data),
@@ -76,7 +78,7 @@ def run_js_analyzer(csv_data, track_condition, is_advanced):
         )
         
         if result.returncode != 0:
-            raise Exception(f"Analyzer error: {result.stderr}")
+            raise Exception(f"Analyzer error: {result.stderr} | Output: {result.stdout}")
         
         # Parse results
         return json.loads(result.stdout)
@@ -84,7 +86,7 @@ def run_js_analyzer(csv_data, track_condition, is_advanced):
     except subprocess.TimeoutExpired:
         raise Exception("Analysis timed out (>30 seconds)")
     except json.JSONDecodeError as e:
-        raise Exception(f"Invalid analyzer output: {e}")
+        raise Exception(f"Invalid analyzer output: {e} | Raw Output: {result.stdout}")
     except Exception as e:
         raise Exception(f"Analysis failed: {str(e)}")
 
@@ -183,3 +185,51 @@ def get_meeting_results(meeting_id):
         results['races'].append(race_data)
     
     return results
+
+# --- Standalone Execution for Server.js ---
+if __name__ == "__main__":
+    # This block handles execution when called by server.js via spawn/subprocess
+    try:
+        # Read parameters passed from server.js via stdin (which includes file path, track_condition, etc.)
+        input_json = sys.stdin.read()
+        
+        if not input_json:
+            raise ValueError("No input data received from Node.js server.")
+            
+        data = json.loads(input_json)
+        
+        # Required inputs from server.js
+        file_path = data.get('file_path')
+        track_condition = data.get('track_condition', 'good')
+        user_id = data.get('user_id', 'mock_user_123')
+        is_advanced = data.get('is_advanced', False)
+        filename = os.path.basename(file_path)
+
+        if not file_path:
+            raise ValueError("Missing file_path in input data.")
+
+        # --- MOCK EXECUTION BLOCK ---
+        # In a real Flask/DB environment, you would call:
+        # result = process_csv_and_analyze(file_path, filename, track_condition, user_id, is_advanced)
+        # print(json.dumps(result))
+        
+        # For this standalone environment, we skip the DB code and mock the output structure
+        
+        # Read CSV content to pass to Node.js (or mock it)
+        with open(file_path, 'r') as f:
+            csv_data = f.read()
+
+        # Call the Node.js Analyzer
+        analysis_results = run_js_analyzer(csv_data, track_condition, is_advanced)
+        
+        # Mock DB storage completion and return the final structure
+        print(json.dumps({
+            'meeting_id': 999,
+            'meeting_name': filename.replace('.csv', ''),
+            'results': analysis_results
+        }))
+
+    except Exception as e:
+        # Write error as JSON to stderr for Node.js to catch
+        sys.stderr.write(json.dumps({'error': f"Python Orchestrator Error: {str(e)}"}))
+        sys.exit(1)
