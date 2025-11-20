@@ -27,4 +27,7 @@ COPY *.html ./
 COPY *.md ./
 
 # Expose the port (Standard for Node.js)
-EXPOSE 3000
+EXPOSE 3000 
+
+# This CMD line forces the server start and eliminates the need for the problematic Procfile.
+CMD ["node", "server.js"]
