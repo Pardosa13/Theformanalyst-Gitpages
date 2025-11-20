@@ -1,10 +1,11 @@
 # Use a Node.js base image (includes NPM) as server.js is the entry point
 FROM node:18-slim
 
-# 1. Install system dependencies (Python and build tools)
-# python3-dev is essential for compiling Python packages like pandas with C extensions.
+# 1. Install system dependencies (Python, build tools, and PostgreSQL libraries)
+# libpq-dev is ESSENTIAL for compiling psycopg2-binary, which links against C libraries.
+# python3-dev is essential for compiling packages like pandas.
 RUN apt-get update && \
-    apt-get install -y python3 python3-pip build-essential python3-dev && \
+    apt-get install -y python3 python3-pip build-essential python3-dev libpq-dev && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -15,28 +16,22 @@ WORKDIR /usr/src/app
 COPY package*.json ./
 COPY requirements.txt ./
 
-# 2. Install Node.js dependencies
+# 2. Install Node.js dependencies (Needed for analyzer.js)
 RUN npm install
 
 # 3. Install Python dependencies
-# Upgrade pip first, then install packages without version constraints for better compatibility
 RUN python3 -m pip install --upgrade pip && \
     pip3 install --no-cache-dir -r requirements.txt
 
-# Copy remaining application files
-COPY server.js ./
-COPY analyzer.py ./
-COPY models.py ./
-COPY analyzer.js ./
-COPY index.html ./
-COPY 404.html ./
-COPY 500.html ./
-COPY 502.html ./
+# Copy remaining application files (using wildcards is simpler)
+COPY *.py ./
+COPY *.js ./
+COPY *.html ./
 COPY *.md ./
 
-# Expose the port (Railway automatically maps this to $PORT)
-EXPOSE 3000
+# Expose the port
+EXPOSE 8000 
 
-# Set the entrypoint and command to run the Node.js server via npm start
-ENTRYPOINT [ "npm" ]
-CMD [ "start" ]
+# Set the entrypoint to run the Python Gunicorn server
+# We assume your main Flask application instance is named 'app' inside 'app.py'
+CMD ["gunicorn", "--bind", "0.0.0.0:$PORT", "app:app"]
