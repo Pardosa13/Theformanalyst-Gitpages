@@ -6,7 +6,7 @@ const fs = require('fs');
 
 const app = express();
 // Use the port provided by Railway, or 3000 for local development
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 
 // Set up storage for uploaded files
 const UPLOAD_DIR = path.join(__dirname, 'uploads');
