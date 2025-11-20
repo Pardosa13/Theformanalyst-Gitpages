@@ -1,5 +1,13 @@
+providers = ["node", "python"]
+
 [phases.setup]
-nixPkgs = ["...", "gcc", "postgresql"]
+nixPkgs = ["nodejs", "npm", "python311", "postgresql"]
 
 [phases.install]
-cmds = ["pip install -r requirements.txt"]
+cmds = [
+    "npm install",
+    "pip install -r requirements.txt"
+]
+
+[start]
+cmd = "python app.py"
